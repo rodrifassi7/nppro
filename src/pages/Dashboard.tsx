@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../services/supabase';
 import { startOfToday, startOfWeek, startOfMonth } from 'date-fns';
 import { DollarSign, ShoppingBag, TrendingUp, Utensils } from 'lucide-react';
-import type { Order } from '../types';
+import { useOrders } from '../context/OrdersContext';
 
 export const Dashboard = () => {
+    const { orders: allOrders, loading } = useOrders();
     const [period, setPeriod] = useState<'today' | 'week' | 'month'>('today');
     const [stats, setStats] = useState({
         revenue: 0,
@@ -13,32 +13,19 @@ export const Dashboard = () => {
         byType: {} as Record<string, number>,
         topMeals: [] as { name: string; qty: number }[]
     });
-    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        calculateStats();
-    }, [period]);
+        if (!loading) calculateStats();
+    }, [period, allOrders, loading]);
 
-    const calculateStats = async () => {
-        setLoading(true);
-
+    const calculateStats = () => {
         // Determine start date
         const now = new Date();
         let startDate = startOfToday();
         if (period === 'week') startDate = startOfWeek(now, { weekStartsOn: 1 });
         if (period === 'month') startDate = startOfMonth(now);
 
-        const { data: ordersData, error } = await supabase
-            .from('orders')
-            .select('*, items:order_items(*, meal:meals(*))')
-            .gte('created_at', startDate.toISOString());
-
-        if (error || !ordersData) {
-            setLoading(false);
-            return;
-        }
-
-        const orders = ordersData as Order[];
+        const orders = allOrders.filter(o => new Date(o.created_at) >= startDate);
 
         // 1. Basic Stats
         const count = orders.length;
@@ -67,7 +54,6 @@ export const Dashboard = () => {
             .slice(0, 5);
 
         setStats({ revenue, count, avgTicket, byType, topMeals });
-        setLoading(false);
     };
 
     const StatCard = ({ label, value, icon: Icon, color }: any) => (

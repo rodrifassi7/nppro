@@ -23,9 +23,9 @@ create table orders (
   fecha_pedido date default CURRENT_DATE,
   cliente text not null,
   phone text,
-  pack text check (pack in ('single', 'pack5', 'pack10', 'other')) not null,
+  pack text not null, -- No check constraint for max compatibility
   cantidad_viandas integer default 0,
-  monto_total integer not null default 0,
+  monto_total numeric not null default 0,
   observaciones text,
   
   -- Extra columns preserved for App logic (Delivery, Breakdown)

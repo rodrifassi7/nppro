@@ -1,41 +1,24 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { supabase } from '../services/supabase';
-import type { Order, OrderStatus } from '../types';
+import type { OrderStatus } from '../types';
 import { format, isToday, isThisWeek, isThisMonth, parseISO } from 'date-fns';
 import { Search, Filter, CheckCircle, Truck, DollarSign, Trash2 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { useOrders } from '../context/OrdersContext';
 
 export const OrdersList = () => {
     const { isAdmin } = useAuth();
-    const [orders, setOrders] = useState<Order[]>([]);
-    const [loading, setLoading] = useState(true);
+    const { orders, loading, refreshOrders } = useOrders();
 
     // Filters
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState<'all' | OrderStatus>('all');
     const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'week' | 'month'>('today');
 
-    useEffect(() => {
-        fetchOrders();
-    }, []);
-
-    const fetchOrders = async () => {
-        setLoading(true);
-        const { data, error } = await supabase
-            .from('orders')
-            .select('*, items:order_items(*, meal:meals(*))')
-            .order('created_at', { ascending: false });
-
-        if (!error && data) {
-            setOrders(data);
-        }
-        setLoading(false);
-    };
-
     const updateStatus = async (id: string, newStatus: OrderStatus) => {
         const { error } = await supabase.from('orders').update({ status: newStatus }).eq('id', id);
         if (!error) {
-            setOrders(orders.map(o => o.id === id ? { ...o, status: newStatus } : o));
+            refreshOrders();
         }
     };
 
@@ -43,7 +26,7 @@ export const OrdersList = () => {
         if (!confirm('¿Estás seguro de eliminar este pedido?')) return;
         const { error } = await supabase.from('orders').delete().eq('id', id);
         if (!error) {
-            setOrders(orders.filter(o => o.id !== id));
+            refreshOrders();
         } else {
             alert('Error al eliminar (Verificá si sos Admin)');
         }

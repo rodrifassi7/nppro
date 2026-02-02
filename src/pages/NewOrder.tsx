@@ -5,10 +5,12 @@ import { PRICES } from '../types';
 import type { OrderType, Meal } from '../types';
 import { Plus, Trash2, Save, Loader2, DollarSign } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { useOrders } from '../context/OrdersContext';
 
 export const NewOrder = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
+    const { refreshOrders } = useOrders();
     const [saving, setSaving] = useState(false);
 
     // Order State
@@ -94,6 +96,7 @@ export const NewOrder = () => {
                 if (itemsError) throw itemsError;
             }
 
+            await refreshOrders();
             navigate('/orders');
         } catch (err: any) {
             alert('Error al crear pedido: ' + err.message);

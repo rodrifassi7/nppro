@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './hooks/useAuth';
+import { OrdersProvider } from './context/OrdersContext';
 import { Login } from './pages/Login';
 import { Layout } from './components/Layout';
 import { Loader2 } from 'lucide-react';
@@ -29,16 +30,18 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <Routes>
-          <Route path="/login" element={<Login />} />
+        <OrdersProvider>
+          <Routes>
+            <Route path="/login" element={<Login />} />
 
-          <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
-            <Route index element={<Dashboard />} />
-            <Route path="new-order" element={<NewOrder />} />
-            <Route path="orders" element={<OrdersList />} />
-            <Route path="meals" element={<Meals />} />
-          </Route>
-        </Routes>
+            <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+              <Route index element={<Dashboard />} />
+              <Route path="new-order" element={<NewOrder />} />
+              <Route path="orders" element={<OrdersList />} />
+              <Route path="meals" element={<Meals />} />
+            </Route>
+          </Routes>
+        </OrdersProvider>
       </AuthProvider>
     </BrowserRouter>
   );
