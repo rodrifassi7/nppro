@@ -52,19 +52,26 @@ export const NewOrder = () => {
 
         try {
             // 1. Create Order
+            const cantidadViandas = selectedMeals.reduce((acc, item) => acc + item.qty, 0);
+            const fechaPedido = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+
             const { data: order, error: orderError } = await supabase
                 .from('orders')
                 .insert({
-                    customer_name: customerName,
+                    cliente: customerName,
                     phone,
-                    order_type: orderType,
+                    pack: orderType,
+                    cantidad_viandas: cantidadViandas,
+                    fecha_pedido: fechaPedido,
+                    monto_total: total,
+                    observaciones: notes,
+
+                    // Extra fields
                     other_label: orderType === 'other' ? otherLabel : null,
                     delivery,
                     status,
                     subtotal,
                     delivery_fee: deliveryFee,
-                    total,
-                    notes,
                     created_by: user.id
                 })
                 .select()

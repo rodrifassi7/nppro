@@ -52,7 +52,7 @@ export const OrdersList = () => {
     const filteredOrders = orders.filter(order => {
         // 1. Search
         const searchMatch =
-            order.customer_name.toLowerCase().includes(search.toLowerCase()) ||
+            order.cliente.toLowerCase().includes(search.toLowerCase()) ||
             (order.phone && order.phone.includes(search));
 
         // 2. Status
@@ -160,12 +160,12 @@ export const OrdersList = () => {
                                         pack5: 'Pack 5',
                                         pack10: 'Pack 10',
                                         other: 'Otro'
-                                    }[order.order_type] || order.order_type;
+                                    }[order.pack] || order.pack;
 
                                     return (
                                         <tr key={order.id} className="hover:bg-slate-50 transition-colors">
                                             <td className="p-4">
-                                                <div className="font-medium text-slate-900">{order.customer_name}</div>
+                                                <div className="font-medium text-slate-900">{order.cliente}</div>
                                                 <div className="text-sm text-slate-500">{order.phone}</div>
                                             </td>
                                             <td className="p-4">
@@ -174,7 +174,7 @@ export const OrdersList = () => {
                                                 {order.delivery && <div className="text-xs text-green-600 flex items-center gap-1"><Truck size={10} /> Con envío</div>}
                                             </td>
                                             <td className="p-4 font-medium text-slate-900">
-                                                $ {order.total.toLocaleString('es-AR')}
+                                                $ {order.monto_total.toLocaleString('es-AR')}
                                             </td>
                                             <td className="p-4">
                                                 <StatusBadge status={order.status} />

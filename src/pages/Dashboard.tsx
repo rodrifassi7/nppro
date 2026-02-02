@@ -42,12 +42,12 @@ export const Dashboard = () => {
 
         // 1. Basic Stats
         const count = orders.length;
-        const revenue = orders.reduce((sum, o) => sum + (o.total || 0), 0); // Using total value of all orders
+        const revenue = orders.reduce((sum, o) => sum + (o.monto_total || 0), 0); // Using total value of all orders
         const avgTicket = count > 0 ? revenue / count : 0;
 
         // 2. By Type
         const byType = orders.reduce((acc, o) => {
-            acc[o.order_type] = (acc[o.order_type] || 0) + 1;
+            acc[o.pack] = (acc[o.pack] || 0) + 1;
             return acc;
         }, {} as Record<string, number>);
 

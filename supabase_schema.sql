@@ -19,18 +19,23 @@ create table meals (
 -- ORDERS
 create table orders (
   id uuid default uuid_generate_v4() primary key,
-  customer_name text not null,
+  created_at timestamptz default now(),
+  fecha_pedido date default CURRENT_DATE,
+  cliente text not null,
   phone text,
-  order_type text check (order_type in ('single', 'pack5', 'pack10', 'other')) not null,
-  other_label text, -- only if order_type = 'other'
+  pack text check (pack in ('single', 'pack5', 'pack10', 'other')) not null,
+  cantidad_viandas integer default 0,
+  monto_total integer not null default 0,
+  observaciones text,
+  
+  -- Extra columns preserved for App logic (Delivery, Breakdown)
+  other_label text, -- only if pack = 'other'
   delivery boolean default false,
   status text check (status in ('pending', 'paid', 'delivered')) default 'pending',
   subtotal numeric not null default 0,
   delivery_fee numeric not null default 0,
-  total numeric not null default 0,
-  notes text,
-  created_by uuid references profiles(id),
-  created_at timestamptz default now()
+  
+  created_by uuid references profiles(id)
 );
 
 -- ORDER ITEMS (for meals tracking)

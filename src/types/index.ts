@@ -17,16 +17,18 @@ export type OrderStatus = 'pending' | 'paid' | 'delivered';
 
 export interface Order {
     id: string;
-    customer_name: string;
+    cliente: string;
     phone?: string;
-    order_type: OrderType;
+    pack: OrderType;
     other_label?: string;
     delivery: boolean;
     status: OrderStatus;
     subtotal: number;
     delivery_fee: number;
-    total: number;
-    notes?: string;
+    monto_total: number;
+    observaciones?: string;
+    cantidad_viandas: number;
+    fecha_pedido: string;
     created_at: string;
     created_by: string;
     items?: OrderItem[];
