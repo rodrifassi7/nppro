@@ -1,6 +1,6 @@
 import { Outlet, useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { LayoutDashboard, PlusCircle, List, LogOut, UtensilsCrossed } from 'lucide-react';
+import { LayoutDashboard, PlusCircle, List, LogOut, UtensilsCrossed, Users, MessageCircle } from 'lucide-react';
 import clsx from 'clsx';
 
 export const Layout = () => {
@@ -17,6 +17,8 @@ export const Layout = () => {
         { label: 'Panel', path: '/', icon: LayoutDashboard },
         { label: 'Nuevo pedido', path: '/new-order', icon: PlusCircle },
         { label: 'Pedidos', path: '/orders', icon: List },
+        { label: 'Clientes', path: '/customers', icon: Users },
+        { label: 'Seguimientos', path: '/followups', icon: MessageCircle },
         ...(isAdmin ? [{ label: 'Comidas', path: '/meals', icon: UtensilsCrossed }] : []),
     ];
 

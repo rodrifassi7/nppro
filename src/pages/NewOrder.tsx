@@ -2,28 +2,36 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../services/supabase';
 import { useNavigate } from 'react-router-dom';
 import { PRICES } from '../types';
-import type { OrderType, Meal } from '../types';
 import { Plus, Trash2, Save, Loader2, DollarSign } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useOrders } from '../context/OrdersContext';
+import { addDays } from 'date-fns';
+import type { OrderType, Meal, FollowupType } from '../types';
+
+import { CustomerSearch } from '../components/CustomerSearch';
+import { useCustomers } from '../context/CustomersContext';
+import { Sparkles } from 'lucide-react';
 
 export const NewOrder = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
     const { refreshOrders } = useOrders();
+    const { createCustomer } = useCustomers(); // Context hook
     const [saving, setSaving] = useState(false);
 
     // Order State
+    const [customerId, setCustomerId] = useState<string | null>(null);
     const [customerName, setCustomerName] = useState('');
     const [phone, setPhone] = useState('');
-    const [orderType, setOrderType] = useState<OrderType>('single');
+    // Default to pack10 as recommended
+    const [orderType, setOrderType] = useState<OrderType>('pack10');
     const [otherLabel, setOtherLabel] = useState('');
     const [delivery, setDelivery] = useState(false);
     const [manualSubtotal, setManualSubtotal] = useState<string>('');
     const [notes, setNotes] = useState('');
     const [status, setStatus] = useState('pending');
 
-    // Meals State
+    // ... (meals state unchanged) ...
     const [availableMeals, setAvailableMeals] = useState<Meal[]>([]);
     const [selectedMeals, setSelectedMeals] = useState<{ mealId: string, qty: number }[]>([]);
 
@@ -53,15 +61,37 @@ export const NewOrder = () => {
         setSaving(true);
 
         try {
+            // 0. Resolve Customer ID
+            let finalCustomerId = customerId;
+
+            if (!finalCustomerId && phone) {
+                // Try to create new customer
+                const newCust = await createCustomer({
+                    full_name: customerName,
+                    phone: phone,
+                    status: 'active'
+                });
+
+                if (newCust) {
+                    finalCustomerId = newCust.id;
+                } else {
+                    // Fallback or duplicate error (ignore and proceed creating order without link or let trigger handle? 
+                    // Better to rely on what handles duplicates best. 
+                    // For now, if create fails, we proceed with basic fields, but ideally we want the link.
+                    // Let's assume createCustomer handles it gracefully or returns null.
+                }
+            }
+
             // 1. Create Order
             const cantidadViandas = selectedMeals.reduce((acc, item) => acc + item.qty, 0);
-            const fechaPedido = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+            const fechaPedido = new Date().toISOString().split('T')[0];
 
             const { data: order, error: orderError } = await supabase
                 .from('orders')
                 .insert({
                     cliente: customerName,
                     phone,
+                    customer_id: finalCustomerId, // Linked!
                     pack: orderType,
                     cantidad_viandas: cantidadViandas,
                     fecha_pedido: fechaPedido,
@@ -81,7 +111,7 @@ export const NewOrder = () => {
 
             if (orderError) throw orderError;
 
-            // 2. Create Order Items
+            // 2. Create Order Items (unchanged)
             if (selectedMeals.length > 0 && order) {
                 const items = selectedMeals.map(item => ({
                     order_id: order.id,
@@ -96,6 +126,31 @@ export const NewOrder = () => {
                 if (itemsError) throw itemsError;
             }
 
+            // 3. Create Followup (Automated)
+            let followupType: FollowupType | null = null;
+            let daysToAdd = 0;
+
+            if (orderType === 'single') {
+                followupType = 'reventa_pack';
+                daysToAdd = 3;
+            } else if (orderType === 'pack5' || orderType === 'pack10') {
+                followupType = 'recompra';
+                daysToAdd = 6;
+            }
+
+            if (followupType) {
+                const dueDate = addDays(new Date(), daysToAdd).toISOString().split('T')[0];
+                await supabase.from('followups').insert({
+                    customer_name: customerName,
+                    customer_phone: phone,
+                    order_id: order?.id,
+                    type: followupType,
+                    status: 'pending',
+                    due_date: dueDate,
+                    created_at: new Date().toISOString()
+                });
+            }
+
             await refreshOrders();
             navigate('/orders');
         } catch (err: any) {
@@ -105,6 +160,7 @@ export const NewOrder = () => {
         }
     };
 
+    // ... (meal row helpers unchanged) ...
     const addMealRow = () => {
         if (availableMeals.length > 0) {
             setSelectedMeals([...selectedMeals, { mealId: availableMeals[0].id, qty: 1 }]);
@@ -133,15 +189,35 @@ export const NewOrder = () => {
                     <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
                         <h2 className="text-lg font-semibold mb-4 text-slate-700">Detalles del cliente</h2>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="col-span-1 sm:col-span-2">
+                                <label className="block text-sm font-medium text-slate-600 mb-1">Buscar o crear cliente *</label>
+                                <CustomerSearch
+                                    onSelect={(c) => {
+                                        setCustomerId(c.id);
+                                        setCustomerName(c.full_name);
+                                        setPhone(c.phone);
+                                    }}
+                                    onNewName={(name) => {
+                                        setCustomerId(null); // Reset ID if name changes manually
+                                        setCustomerName(name);
+                                    }}
+                                />
+                            </div>
+
+                            {/* Hidden or ReadOnly inputs for visual confirmation if needed, or just let Search handle it. 
+                                Let's keep Phone input visible to allow editing or adding if new. 
+                            */}
                             <div>
-                                <label className="block text-sm font-medium text-slate-600 mb-1">Nombre del cliente *</label>
+                                <label className="block text-sm font-medium text-slate-600 mb-1">Nombre (Confirmar)</label>
                                 <input
-                                    autoFocus
                                     type="text"
                                     required
                                     value={customerName}
-                                    onChange={e => setCustomerName(e.target.value)}
-                                    className="w-full p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-slate-900 outline-none"
+                                    onChange={e => {
+                                        setCustomerName(e.target.value);
+                                        setCustomerId(null); // Unlink if edited
+                                    }}
+                                    className="w-full p-2.5 rounded-lg border border-slate-300 bg-slate-50 focus:bg-white transition-colors"
                                 />
                             </div>
                             <div>
@@ -150,6 +226,7 @@ export const NewOrder = () => {
                                     type="tel"
                                     value={phone}
                                     onChange={e => setPhone(e.target.value)}
+                                    placeholder="ej. 11 1234 5678"
                                     className="w-full p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-slate-900 outline-none"
                                 />
                             </div>
@@ -160,18 +237,61 @@ export const NewOrder = () => {
                         <h2 className="text-lg font-semibold mb-4 text-slate-700">Detalles del pedido</h2>
                         <div className="space-y-4">
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div>
+                                <div className="col-span-2">
                                     <label className="block text-sm font-medium text-slate-600 mb-1">Tipo de pedido</label>
-                                    <select
-                                        value={orderType}
-                                        onChange={e => setOrderType(e.target.value as OrderType)}
-                                        className="w-full p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-slate-900 outline-none bg-white"
-                                    >
-                                        <option value="single">Suelto ($ {PRICES.single.toLocaleString('es-AR')})</option>
-                                        <option value="pack5">Pack 5 ($ {PRICES.pack5.toLocaleString('es-AR')})</option>
-                                        <option value="pack10">Pack 10 ($ {PRICES.pack10.toLocaleString('es-AR')})</option>
-                                        <option value="other">Otro / Personalizado</option>
-                                    </select>
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                        {/* Pack 10 - Highlighted */}
+                                        <label className={`
+                                            relative flex flex-col p-4 border rounded-xl cursor-pointer transition-all
+                                            ${orderType === 'pack10' ? 'border-yellow-500 bg-yellow-50 ring-1 ring-yellow-500' : 'border-slate-200 hover:border-slate-300'}
+                                        `}>
+                                            <input type="radio" name="orderType" value="pack10" checked={orderType === 'pack10'} onChange={() => setOrderType('pack10')} className="sr-only" />
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <span className="font-bold text-slate-900">Pack 10</span>
+                                                <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-0.5 rounded-full flex items-center gap-1">
+                                                    <Sparkles size={10} /> Reco
+                                                </span>
+                                            </div>
+                                            <span className="text-sm text-slate-600">$ {PRICES.pack10.toLocaleString('es-AR')}</span>
+                                            <span className="text-xs text-slate-500 mt-1">Solución completa</span>
+                                        </label>
+
+                                        {/* Pack 5 */}
+                                        <label className={`
+                                            flex flex-col p-4 border rounded-xl cursor-pointer transition-all
+                                            ${orderType === 'pack5' ? 'border-slate-900 bg-slate-50 ring-1 ring-slate-900' : 'border-slate-200 hover:border-slate-300'}
+                                        `}>
+                                            <input type="radio" name="orderType" value="pack5" checked={orderType === 'pack5'} onChange={() => setOrderType('pack5')} className="sr-only" />
+                                            <span className="font-bold text-slate-900 mb-1">Pack 5</span>
+                                            <span className="text-sm text-slate-600">$ {PRICES.pack5.toLocaleString('es-AR')}</span>
+                                            <span className="text-xs text-slate-500 mt-1">Media semana</span>
+                                        </label>
+
+                                        {/* Single */}
+                                        <label className={`
+                                            flex flex-col p-4 border rounded-xl cursor-pointer transition-all
+                                            ${orderType === 'single' ? 'border-slate-900 bg-slate-50 ring-1 ring-slate-900' : 'border-slate-200 hover:border-slate-300'}
+                                        `}>
+                                            <input type="radio" name="orderType" value="single" checked={orderType === 'single'} onChange={() => setOrderType('single')} className="sr-only" />
+                                            <span className="font-bold text-slate-900 mb-1">Suelto</span>
+                                            <span className="text-sm text-slate-600">$ {PRICES.single.toLocaleString('es-AR')}</span>
+                                            <span className="text-xs text-slate-500 mt-1">Prueba</span>
+                                        </label>
+                                    </div>
+
+                                    {/* Other select hidden unless needed, or extra option below */}
+                                    <div className="mt-3">
+                                        <label className="flex items-center gap-2 text-sm text-slate-500 cursor-pointer">
+                                            <input
+                                                type="radio"
+                                                name="orderType"
+                                                value="other"
+                                                checked={orderType === 'other'}
+                                                onChange={() => setOrderType('other')}
+                                            />
+                                            Otro / Personalizado
+                                        </label>
+                                    </div>
                                 </div>
 
                                 {orderType === 'other' && (
