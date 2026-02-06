@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useCustomers } from '../context/CustomersContext';
 import { Search, User, Phone, Calendar, DollarSign } from 'lucide-react';
 import { format } from 'date-fns';

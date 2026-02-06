@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Search, UserPlus } from 'lucide-react';
 import { useCustomers } from '../context/CustomersContext';
 import type { Customer } from '../types';

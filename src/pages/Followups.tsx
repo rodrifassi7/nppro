@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useFollowups } from '../context/FollowupsContext';
 import { Clock, Copy, CheckCircle, MessageCircle } from 'lucide-react';
 import { format, isPast, isToday } from 'date-fns';
