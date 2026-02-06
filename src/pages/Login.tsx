@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../services/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { KeyRound, Mail, Loader2, ArrowRight } from 'lucide-react';
-
 import logo from '../assets/logo.png';
+
+
 
 export const Login = () => {
     const [email, setEmail] = useState('');
@@ -15,11 +16,12 @@ export const Login = () => {
     const { session } = useAuth();
 
     // Redirect if already logged in
-    React.useEffect(() => {
+    useEffect(() => {
         if (session) navigate('/');
     }, [session, navigate]);
 
-    const handleLogin = async (e: React.FormEvent) => {
+    const handleLogin = async (e: FormEvent) => {
+
         e.preventDefault();
         setLoading(true);
         setError(null);
